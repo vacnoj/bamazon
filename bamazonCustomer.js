@@ -8,7 +8,9 @@ var price = 0;
 
 var userStockNumber = 0;
 
-var subtotal = 0;
+var subtotal = 0.00;
+
+var numOfItems = 0;
 
 var connection = mysql.createConnection({
     host: "localhost",
@@ -26,21 +28,27 @@ var connection = mysql.createConnection({
 });
 function displayItems() {
     connection.query("SELECT * FROM products", function(err, res) {
-        res.forEach(function(e) {
-            console.log('=========================================');
-            console.log(`Stock Number: ${e.id}`);
-            console.log(`Product: ${e.product_name}`);
-            console.log(`Category: ${e.department_name}`);
-            console.log(`Price: \$${e.price}`);
-            console.log(`There are ${e.stock_quantity} left!`);
-    }); console.log('=========================================');
+        if (!err) {
+            numOfItems = res.length;
+            res.forEach(function(e) {
+                console.log('=========================================');
+                console.log(`Stock Number: ${e.id}`);
+                console.log(`Product: ${e.product_name}`);
+                console.log(`Category: ${e.department_name}`);
+                console.log(`Price: \$${e.price}`);
+                console.log(`There are ${e.stock_quantity} left!`);
+            }); console.log('=========================================');
+        } else console.log(err);
 }); setTimeout(pickItem, 1000);
 }
 function pickItem() {
     inquirer.prompt([
         {
             message: "What is the stock number of the item?",
-            name: 'stockNumber'
+            name: 'stockNumber',
+            validate: function(value) {
+                return value <= numOfItems;
+            }
         }
     ]).then(function(item) {
         userStockNumber = item.stockNumber;
@@ -53,14 +61,13 @@ function pickItem() {
             if (!err) {
                 quantity = res[0].stock_quantity;
                 price = res[0].price;
-                console.log(quantity);
+                console.log(`There are ${quantity} available.`);
             } else console.log(err);
         }); setTimeout(pickQuantity, 1000);
     });
 }
 
 function pickQuantity() {
-    console.log(quantity);
     inquirer.prompt([
         {
             message: "How many?",
@@ -68,6 +75,9 @@ function pickQuantity() {
             validate: function(value) {
                 if (quantity < value) {
                     console.log("\nInsufficent qunatity available");
+                } if (value < 0) {
+                    console.log("Invalid quantity");
+                    return false;
                 }
                 return quantity >= value;
             } 
@@ -85,14 +95,15 @@ function pickQuantity() {
             if (!err) {
                 console.log("Updated!");
             } else console.log(err);
-        }); connection.end();
+        }); 
+        quantity = 0;
+        price = 0;
+        userStockNumber = 0;
+        subtotal = 0;
+        connection.end();
     }); 
 }
 
 function checkOut() {
-    console.log(`That will cost: ${subtotal}\nThank You!`);
-    quantity = 0;
-    price = 0;
-    userStockNumber = 0;
-    subtotal = 0;
+    console.log(`That will cost: \$${subtotal}\nThank You!`);
 }
